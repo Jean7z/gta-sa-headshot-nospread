@@ -1,8 +1,9 @@
-# SA Android Headshot & NoSpread
+# SA Android Aimbot — Headshot & NoSpread
 
-More precise shots for GTA: San Andreas for Android 2.10 — bullets land much
-closer to where the crosshair points, and the auto-aim favors the head more
-than in the original game.
+An advanced aimbot for GTA: San Andreas for Android 2.10. The auto-aim locks
+onto heads far more consistently than the original game, the player's bullet
+spread is reduced (more precision), and everything is player-only — NPC
+gunfights keep the stock behavior.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Version](https://img.shields.io/badge/version-1.0-green.svg)](https://github.com/Jean7z/gta-sa-headshot-nospread/releases)
@@ -17,38 +18,43 @@ than in the original game.
 
 ## Features
 
-- **Increased shot precision** — the bullet spread applied when the player
-  fires is reduced, so shots land much closer to the crosshair (arm64).
-- **Headshot-focused aiming** — the auto-aim and locked shots favor the head
-  far more consistently than in the original game.
+- **Advanced aim assist** — the auto-aim picks the head far more consistently
+  than stock, including while switching targets; most aimed shots end up on the
+  head.
+- **Increased precision** — the bullet spread applied when the player fires is
+  reduced, so bullets land much closer to the crosshair (arm64).
 - **Player-only by default** — NPC gunfights keep the original behavior; only
   *your* shots are affected.
-- **Adjustable aim assist** — how strongly the auto-aim pulls toward the head
-  can be tuned in the config.
+- **Tunable aim strength** — how aggressively the auto-aim locks onto the head
+  is configurable (`HeadRangeMul` / `HeadRangeMin`).
 - **Every feature togglable** via the AML config file.
 - **Clean uninstall** — just delete the `.so`, nothing else touched.
 
 ## How it works
 
-- **Reduced spread (arm64):** the game applies a bullet-spread value to every
-  shot inside `CWeapon::FireInstantHit`. The mod overwrites those values for
-  the player, so firefights stay more accurate than in the vanilla game. NPCs
-  use the original values.
-- **Headshot-focused aim:** the game decides whether to aim at the head or the
-  chest each frame. The mod makes the head win far more often, including while
-  switching targets, so most hits land on the head. A few shots can still land
-  on the body depending on the situation — that's how the original engine
-  behaves.
-- **Aim distance:** the game picks a "head lock" range per weapon. The mod
-  lets you scale and clamp that range (see `HeadRangeMul` / `HeadRangeMin`).
+The mod is a runtime aimbot for the player:
+
+- **Aim decision (arm64):** every frame the game decides between aiming at the
+  head or the chest. The mod makes the head win far more often, including
+  while the target is being re-acquired, so the reticle and the locked shots
+  typically land on the head.
+- **Precision (arm64):** the game applies a bullet-spread value to every shot.
+  The mod reduces it for the player, making firefights noticeably tighter than
+  vanilla. NPCs keep the original values.
+- **Aim distance (all ABIs):** the game uses a per-weapon "head lock" range;
+  the mod lets you scale and clamp it to keep the aim from snapping wildly.
+
+> Honest note: the engine still resolves the final hit. The mod makes the head
+> the overwhelmingly common outcome, but an occasional body shot can happen —
+> that is normal engine behavior, not a bug.
 
 ## Requirements
 
 - **GTA: San Andreas** for Android **2.10** (play store version).
 - **[Android Mod Loader (AML)](https://github.com/AndroidModLoader/AndroidModLoader)**
   installed and working (the game must load `libAML.so`).
-- **arm64-v8a** recommended — the precision/aim improvements are for 64-bit.
-  On a 32-bit (`armeabi-v7a`) build only the aim-distance tweak applies.
+- **arm64-v8a** recommended — the aim and precision improvements are for
+  64-bit. On a 32-bit (`armeabi-v7a`) build only the aim-distance tweak applies.
 
 ## Installation
 
@@ -71,11 +77,11 @@ All keys live under the `[Aimbot]` section of the AML config file:
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `Headshot` | `true` | Prefer aiming at the head for the player |
+| `Headshot` | `true` | Enable the headshot-favoring aim |
 | `NoSpread` | `true` | Reduce bullet spread for the player (arm64) |
 | `PlayerOnly` | `true` | Only affect the player's shots; NPCs stay original |
-| `HeadRangeMul` | `2.0` | How far the auto-aim can pull toward the head (higher = stronger) |
-| `HeadRangeMin` | `30.0` | The auto-aim always works at least this far away |
+| `HeadRangeMul` | `2.0` | Aim-assist strength: higher locks onto heads from farther away |
+| `HeadRangeMin` | `30.0` | Minimum distance at which the aim-assist locks |
 
 ## Building from source
 
@@ -132,7 +138,7 @@ AML mods use (`RusJJ/AndroidModLoader` + `AndroidModLoader/aml-psdk`, both MIT).
 ## Compatibility
 
 - Game: GTA San Andreas **2.10** for Android.
-- The precision and aim patches target the stock **arm64** `libGTASA.so` 2.10;
+- The aim and precision patches target the stock **arm64** `libGTASA.so` 2.10;
   `PlayerOnly` mode leaves NPC gunfights untouched.
 - Tested alongside the `net.psdk.samod.unlimitedgym` mod.
 
