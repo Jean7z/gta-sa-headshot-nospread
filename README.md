@@ -1,7 +1,8 @@
 # SA Android Headshot & NoSpread
 
-Zero-spread headshots for GTA: San Andreas for Android 2.10 — your shots go
-exactly where the reticle points, and the auto-aim always locks onto the head.
+More precise shots for GTA: San Andreas for Android 2.10 — bullets land much
+closer to where the crosshair points, and the auto-aim favors the head more
+than in the original game.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Version](https://img.shields.io/badge/version-1.0-green.svg)](https://github.com/Jean7z/gta-sa-headshot-nospread/releases)
@@ -16,64 +17,38 @@ exactly where the reticle points, and the auto-aim always locks onto the head.
 
 ## Features
 
-- **Headshot always** — both the reticle and the hit point are forced to the
-  head bone, including while switching targets.
-- **NoSpread** — the bullet spread picked up inside
-  `CWeapon::FireInstantHit` is zeroed, so bullets land where the crosshair is.
-- **Player-only by default** — NPC gunfights stay 100% stock: the scatter is
-  removed only when the *player* fires.
-- **Softened aim magnet** — the auto-aim head range is scaled/floored through
-  config (no more 1e6 instant-snap).
+- **Increased shot precision** — the bullet spread applied when the player
+  fires is reduced, so shots land much closer to the crosshair (arm64).
+- **Headshot-focused aiming** — the auto-aim and locked shots favor the head
+  far more consistently than in the original game.
+- **Player-only by default** — NPC gunfights keep the original behavior; only
+  *your* shots are affected.
+- **Adjustable aim assist** — how strongly the auto-aim pulls toward the head
+  can be tuned in the config.
 - **Every feature togglable** via the AML config file.
 - **Clean uninstall** — just delete the `.so`, nothing else touched.
 
 ## How it works
 
-### NoSpread (arm64)
-
-`CWeapon::FireInstantHit` loads/recomputes the weapon spread into `s8` at 9
-sites. Each site is replaced with `fmov s8, wzr` (zero spread).
-
-In **Player-only** mode each site is instead redirected with a 5-instruction
-trampoline that executes the *original* scatter op (vanilla for NPCs) and then
-zeroes `s8` only when the shooter is the player ped (`CPed::m_pPlayerData` at
-`+0x540` is non-null **only** for the player):
-
-```
-ldr s8, [x8, #0xb54]     ; vanilla spread load (NPCs)
-ldr x16, [x19, #0x540]   ; m_pPlayerData — null unless player
-cbz x16, +8              ; skip the zeroing for NPCs
-fmov s8, wzr             ; player -> zero spread
-ret
-```
-
-Trampolines live in free anonymous mappings placed as close as possible
-within `bl` range of the sites (movable code, no game code is patched besides
-the single `bl`s).
-
-### Always-head bone (arm64)
-
-`CPlayerPed::ProcessControl` ends its target-bone decision with
-`csel w8, w2, w8, NE` so the HEAD bone wins only while the target is strictly
-in-range; a frame spent re-aiming picks SPINE and the shot lands on the chest.
-That instruction is replaced with `mov w8, #5` (BONE_HEAD), so the reticle and
-the impact are always on the head. It lives inside `ProcessControl`, therefore
-only affects the player.
-
-### Head range hook (both ABIs)
-
-`CWeaponInfo::GetTargetHeadRange` already computes a dynamic, weapon-derived
-value (`m_fWeaponRange * K * (skill + 2)`). The mod scales that natural value
-by `HeadRangeMul` and floors it at `HeadRangeMin`, softening the aim
-"magnetism" instead of snapping to 1e6.
+- **Reduced spread (arm64):** the game applies a bullet-spread value to every
+  shot inside `CWeapon::FireInstantHit`. The mod overwrites those values for
+  the player, so firefights stay more accurate than in the vanilla game. NPCs
+  use the original values.
+- **Headshot-focused aim:** the game decides whether to aim at the head or the
+  chest each frame. The mod makes the head win far more often, including while
+  switching targets, so most hits land on the head. A few shots can still land
+  on the body depending on the situation — that's how the original engine
+  behaves.
+- **Aim distance:** the game picks a "head lock" range per weapon. The mod
+  lets you scale and clamp that range (see `HeadRangeMul` / `HeadRangeMin`).
 
 ## Requirements
 
 - **GTA: San Andreas** for Android **2.10** (play store version).
 - **[Android Mod Loader (AML)](https://github.com/AndroidModLoader/AndroidModLoader)**
   installed and working (the game must load `libAML.so`).
-- **arm64-v8a** recommended — the NoSpread + head-bone patches are arm64.
-  On a 32-bit (`armeabi-v7a`) build only the head-range hook applies.
+- **arm64-v8a** recommended — the precision/aim improvements are for 64-bit.
+  On a 32-bit (`armeabi-v7a`) build only the aim-distance tweak applies.
 
 ## Installation
 
@@ -96,11 +71,11 @@ All keys live under the `[Aimbot]` section of the AML config file:
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `Headshot` | `true` | Always aim/lock onto the head bone |
-| `NoSpread` | `true` | Zero the bullet spread (arm64) |
-| `PlayerOnly` | `true` | Only affect the player's shots; NPCs stay vanilla |
-| `HeadRangeMul` | `2.0` | Scale of the natural auto-aim head range |
-| `HeadRangeMin` | `30.0` | Floor for the auto-aim head range |
+| `Headshot` | `true` | Prefer aiming at the head for the player |
+| `NoSpread` | `true` | Reduce bullet spread for the player (arm64) |
+| `PlayerOnly` | `true` | Only affect the player's shots; NPCs stay original |
+| `HeadRangeMul` | `2.0` | How far the auto-aim can pull toward the head (higher = stronger) |
+| `HeadRangeMin` | `30.0` | The auto-aim always works at least this far away |
 
 ## Building from source
 
@@ -157,8 +132,8 @@ AML mods use (`RusJJ/AndroidModLoader` + `AndroidModLoader/aml-psdk`, both MIT).
 ## Compatibility
 
 - Game: GTA San Andreas **2.10** for Android.
-- NoSpread/head-bone patches are verified against the stock **arm64**
-  `libGTASA.so` 2.10; `PlayerOnly` mode leaves NPC gunfights untouched.
+- The precision and aim patches target the stock **arm64** `libGTASA.so` 2.10;
+  `PlayerOnly` mode leaves NPC gunfights untouched.
 - Tested alongside the `net.psdk.samod.unlimitedgym` mod.
 
 ## Credits
